@@ -1,9 +1,12 @@
+import { webRouteGuard } from "@/server/web-auth";
 import path from "node:path";
 import { listFiles, readFile } from "@/server/computer";
 import { guessMime } from "@/server/files";
 
 // The dot's workspace: GET lists files; GET ?path=… downloads one.
 export async function GET(req: Request, ctx: RouteContext<"/api/dots/[id]/workspace">) {
+  const denied = webRouteGuard(req, true, true, true);
+  if (denied) return denied;
   const { id } = await ctx.params;
   const p = new URL(req.url).searchParams.get("path");
   try {

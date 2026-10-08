@@ -212,6 +212,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom */}
+      <Link href="/projects" className="mx-3 mb-1 rounded-lg px-3 py-2 text-sm hover:bg-black/[0.04]">项目 · Tools · 终端能力</Link>
       <div className="flex shrink-0 items-center gap-2 p-3">
         <Link
           href="/apps"

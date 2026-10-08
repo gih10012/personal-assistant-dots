@@ -1,5 +1,7 @@
+import { requireWebPage } from "@/server/web-auth";
 import NewDot from "@/components/NewDot";
 
-export default function Page() {
+export default async function Page() {
+  await requireWebPage(true);
   return <NewDot />;
 }

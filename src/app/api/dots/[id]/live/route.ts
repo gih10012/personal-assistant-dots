@@ -1,7 +1,10 @@
+import { webRouteGuard } from "@/server/web-auth";
 import { liveUrl } from "@/server/computer";
 
 // Live-view URL for a dot's cloud computer (wakes it if it's asleep). `?interactive=1` for take-over.
 export async function GET(req: Request, ctx: RouteContext<"/api/dots/[id]/live">) {
+  const denied = webRouteGuard(req, true, true, true);
+  if (denied) return denied;
   const { id } = await ctx.params;
   const interactive = new URL(req.url).searchParams.get("interactive") === "1";
   try {

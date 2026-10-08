@@ -1,7 +1,10 @@
+import { webRouteGuard } from "@/server/web-auth";
 import { MAX_UPLOAD, upload } from "@/server/files";
 
 // The user attaches files in chat. Returns the stored attachments.
 export async function POST(req: Request, ctx: RouteContext<"/api/dots/[id]/files">) {
+  const denied = webRouteGuard(req, true, false, true);
+  if (denied) return denied;
   const { id } = await ctx.params;
   const form = await req.formData();
   const out = [];

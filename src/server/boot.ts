@@ -6,17 +6,21 @@ import { computerInfo } from "./snapshot";
 import { startScheduler } from "./scheduler";
 import { startEvents as startTriggerEvents } from "./triggers";
 import { refresh as refreshComposio, signedIn } from "./composio";
+import * as mesh from "./agent/mesh";
 
 export function boot() {
   // Nothing is running after a restart; don't leave dots stuck in "working".
   for (const dot of repo.listDots()) {
     if (dot.status === "working") repo.updateDot(dot.id, { status: repo.pendingCards(dot.id).length ? "waiting" : "idle" });
   }
+  // Native tasks survive this UI process. Restore their queued/remote status
+  // after the upstream reset instead of displaying a false idle state.
+  mesh.start();
   startScheduler();
   // Listen for Composio trigger events (only if the user added a Composio API key).
   void startTriggerEvents();
   // Learn which models the key can use, then tell any open windows (fills the model pickers).
-  if (canThink()) void models().then(() => emit({ type: "computer", data: computerInfo() })).catch(() => {});
+  if (!mesh.enabled() && canThink()) void models().then(() => emit({ type: "computer", data: computerInfo() })).catch(() => {});
   // Reconnect to Composio For You with the saved sign-in (fills Settings → Apps and the dots' tools).
   if (signedIn()) void refreshComposio().catch((err) => console.warn("[dots] Composio:", err instanceof Error ? err.message : err));
 }

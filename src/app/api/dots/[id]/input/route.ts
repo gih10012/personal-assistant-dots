@@ -1,7 +1,10 @@
+import { webRouteGuard } from "@/server/web-auth";
 import { userInput, type UserInput } from "@/server/computer";
 
 // One mouse / keyboard / navigation event from the Computer tab's live view.
 export async function POST(req: Request, ctx: RouteContext<"/api/dots/[id]/input">) {
+  const denied = webRouteGuard(req, true, false, true);
+  if (denied) return denied;
   const { id } = await ctx.params;
   try {
     await userInput(id, (await req.json()) as UserInput);

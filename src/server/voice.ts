@@ -1,6 +1,7 @@
 import "server-only";
 import { hasKey, openai } from "./agent/client";
 import * as repo from "./repo";
+import { enabled as meshEnabled } from "./agent/mesh";
 
 // Voice calls: a realtime "front" for a dot. It talks with the user and hands real work to the dot's
 // text agent with send_task (same split as Grok Bot's voice harness). Results land later as work updates.
@@ -58,6 +59,7 @@ const TOOLS = [
 
 /** A short-lived credential the browser uses to open the realtime call (WebRTC). */
 export async function createVoiceSession(dotId: string, convId: string): Promise<{ token: string; model: string }> {
+  if (meshEnabled()) throw new Error("Realtime voice is not connected to the native mesh engine. No paid API call was made. Use text tasks, or explicitly select DOTS_ENGINE=responses for the upstream voice engine.");
   if (!hasKey()) throw new Error("Voice calls run on OpenAI's realtime model. Add an OpenAI key in Settings to talk to your dots.");
   const res = await openai().realtime.clientSecrets.create({
     expires_after: { anchor: "created_at", seconds: 120 },

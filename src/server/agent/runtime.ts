@@ -13,6 +13,7 @@ import { emit } from "../bus";
 import * as composio from "../composio";
 import type { AppTrigger, Attachment, CardData, Dot, Routine } from "@/lib/types";
 import * as files from "../files";
+import * as mesh from "./mesh";
 
 type Call = ResponseFunctionToolCall | ResponseComputerToolCall;
 type Pending = {
@@ -40,6 +41,7 @@ const state = (dotId: string): RunState => {
 // ---------------------------------------------------------------- public API
 
 export function sendMessage(dotId: string, text: string, attachments: Attachment[] = [], conversationId?: string) {
+  if (mesh.enabled()) return mesh.send(dotId, text, attachments, conversationId);
   const dot = repo.getDot(dotId);
   if (!dot) throw new Error("No such dot");
   const conv = conversationId ?? repo.latestConversationId(dotId);
@@ -53,6 +55,7 @@ export function sendMessage(dotId: string, text: string, attachments: Attachment
 
 /** Work handed off from a voice call. The user's words are already in the chat as voice lines, so no extra user message. */
 export function queueTask(dotId: string, text: string, conversationId: string) {
+  if (mesh.enabled()) return mesh.send(dotId, text, [], conversationId, { recordUser: false, trigger: { kind: "voice" } });
   const dot = repo.getDot(dotId);
   if (!dot) throw new Error("No such dot");
   repo.addMessage({ dotId, role: "activity", text: `Voice task · ${text}`, conversationId, channelId: null });
@@ -69,6 +72,14 @@ export function sendToChannel(channelId: string, text: string) {
   const members = ch.memberIds.map((id) => repo.getDot(id)).filter((d): d is Dot => Boolean(d));
   const mentioned = members.filter((d) => new RegExp(`@${d.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text));
   const responders = mentioned.length ? mentioned : members.filter((d) => d.id === ch.leadId);
+  if (mesh.enabled()) {
+    for (const dot of responders) {
+      const conv = repo.workConversation(dot.id, "channel", channelId, `#${ch.name}`);
+      mesh.send(dot.id, `[#${ch.name}] ${text}`, [], conv,
+        { channelId, recordUser: false, trigger: { kind: "channel", channelId, name: ch.name } });
+    }
+    return; // Never silently invoke the upstream paid Responses engine.
+  }
   for (const d of responders) {
     if (d.status === "paused") {
       repo.addMessage({ dotId: d.id, role: "system", text: `${d.name} is paused.`, channelId });
@@ -89,6 +100,8 @@ export function runRoutine(routine: Routine) {
   repo.updateRoutine(routine.id, { lastRunAt: Date.now() });
   // Each routine keeps its own conversation, so its runs read like a log you can open any time.
   const conv = repo.workConversation(dot.id, "chat", `routine:${routine.id}`, `Routine · ${routine.name}`);
+  if (mesh.enabled()) return mesh.send(dot.id, `[Routine: ${routine.name}] ${routine.instruction}`, [], conv,
+    { recordUser: false, trigger: { kind: "routine", name: routine.name } });
   repo.addMessage({ dotId: dot.id, role: "system", text: `Routine “${routine.name}” started`, from: `routine:${routine.name}`, conversationId: conv });
   state(dot.id).inbox.push({ text: `[Routine: ${routine.name}] ${routine.instruction}`, trigger: { kind: "routine", name: routine.name }, conversationId: conv });
   void pump(dot.id);
@@ -101,17 +114,21 @@ export function runTrigger(t: AppTrigger, event: Record<string, unknown>) {
   const conv = repo.workConversation(dot.id, "chat", `trigger:${t.id}`, `Trigger · ${t.name}`);
   repo.addMessage({ dotId: dot.id, role: "system", text: `Trigger “${t.name}” fired`, from: `trigger:${t.name}`, conversationId: conv });
   const data = JSON.stringify(event, null, 1).slice(0, 6000);
+  if (mesh.enabled()) return mesh.send(dot.id, `[Trigger: ${t.name}] ${t.instruction}\n\n${data}`, [], conv,
+    { recordUser: false, trigger: { kind: "trigger", name: t.name } });
   state(dot.id).inbox.push({ text: `[Trigger: ${t.name}] ${t.instruction}\n\nWhat happened (${t.toolkit} event data):\n${data}`, trigger: { kind: "trigger", name: t.name }, conversationId: conv });
   void pump(dot.id);
 }
 
-export function stop(dotId: string) {
+export async function stop(dotId: string) {
+  if (mesh.enabled()) return mesh.pause(dotId);
   const s = state(dotId);
   s.inbox = [];
   s.abort?.abort();
 }
 
-export function pause(dotId: string) {
+export async function pause(dotId: string) {
+  if (mesh.enabled()) return mesh.pause(dotId);
   const dot = repo.getDot(dotId);
   if (!dot || dot.status === "paused") return;
   repo.updateDot(dotId, { status: "paused" });
@@ -120,7 +137,8 @@ export function pause(dotId: string) {
   void computer.sleep(dotId).catch(() => {}); // its computer sleeps too (cloud boxes keep their state)
 }
 
-export function resume(dotId: string) {
+export async function resume(dotId: string) {
+  if (mesh.enabled()) return mesh.resume(dotId);
   const dot = repo.getDot(dotId);
   if (!dot || dot.status !== "paused") return;
   const waiting = repo.pendingCards(dotId).length > 0;
@@ -136,6 +154,15 @@ export async function resolveCard(messageId: string, choice: "approve" | "deny" 
   if (!msg || !card || card.status !== "pending") return;
   const dot = repo.getDot(msg.dotId);
   if (!dot || dot.status === "paused") return;
+  if (mesh.enabled()) {
+    // An upstream card represents an old Responses continuation. It is not
+    // approval for a different native operation or permission to call that API.
+    repo.updateMessage(messageId, { card: { ...card, status: "expired" } });
+    repo.addMessage({ dotId: dot.id, role: "system", conversationId: msg.conversationId,
+      channelId: msg.channelId ?? null,
+      text: "This approval belonged to the upstream engine and has expired. It did not authorize a native action or a paid API call. Native questions and approvals currently use the owner channel." });
+    return;
+  }
 
   const approved = choice === "approve" || choice === "always";
   const status: CardData["status"] = choice === "answer" ? "answered" : approved ? "approved" : "denied";

@@ -6,6 +6,9 @@ import Sidebar from "@/components/Sidebar";
 import Toasts from "@/components/Toasts";
 import VoicePanel from "@/components/VoicePanel";
 import MobileBar from "@/components/MobileBar";
+import ObserverNav from "@/components/ObserverNav";
+import { headers } from "next/headers";
+import { loadWebAuth, sessionFromHeaders } from "@/server/web-auth-core";
 import "./globals.css";
 
 // Same pairing as the Composio landing site: Geist Sans (local variable font) + JetBrains Mono.
@@ -17,21 +20,23 @@ export const metadata: Metadata = {
   description: "Open-source personal AI agents that work on their own, on their own computers",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const requestHeaders = await headers();
+  const session = sessionFromHeaders(loadWebAuth(), requestHeaders);
   return (
     <html lang="en" className={`${geistSans.variable} ${jetbrainsMono.variable} h-full`}>
       <body className="flex h-full overflow-hidden">
-        <Suspense>
+        {session?.role === "owner" && <Suspense>
           <Sidebar />
-        </Suspense>
+        </Suspense>}
         <main className="flex min-w-0 flex-1 flex-col bg-card">
-          <Suspense>
+          {session && <ObserverNav role={session.role} />}
+          {session?.role === "owner" && <Suspense>
             <MobileBar />
-          </Suspense>
+          </Suspense>}
           {children}
         </main>
-        <Toasts />
-        <VoicePanel />
+        {session?.role === "owner" && <><Toasts /><VoicePanel /></>}
       </body>
     </html>
   );

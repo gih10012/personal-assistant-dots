@@ -33,7 +33,14 @@ export default function ModelPicker({
 }) {
   const models = useStore((s) => s.computer.models);
   const fallback = useStore((s) => s.computer.model);
+  const nativeEngine = useStore((s) => s.computer.keySource === "codex-mesh");
   const [open, setOpen] = useState(false);
+  if (nativeEngine) return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-black/10 bg-card px-2.5 py-1.5 font-mono text-[11px] text-foreground/65"
+      title="Model selection uses the native worker's authenticated catalog. This interface does not override it.">
+      <Cpu className="size-3.5 text-foreground/45" strokeWidth={1.75} /> Native host catalog
+    </span>
+  );
   const current = value ?? fallback;
   const list = models.length ? models : fallback ? [fallback] : [];
   const options: { id: string | null; label: string; sub: string | null; group?: string }[] = [

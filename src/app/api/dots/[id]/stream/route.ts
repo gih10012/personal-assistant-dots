@@ -1,3 +1,4 @@
+import { webRouteGuard } from "@/server/web-auth";
 import { streamScreen } from "@/server/computer";
 
 export const dynamic = "force-dynamic";
@@ -5,6 +6,8 @@ export const dynamic = "force-dynamic";
 // The dot's browser as an MJPEG stream: an <img> pointed here shows it live. Each frame is followed by the next
 // boundary right away, so the browser paints it immediately instead of waiting for the following frame.
 export async function GET(req: Request, ctx: RouteContext<"/api/dots/[id]/stream">) {
+  const denied = webRouteGuard(req, true, true, true);
+  if (denied) return denied;
   const { id } = await ctx.params;
   const enc = new TextEncoder();
   let stop: (() => Promise<void>) | undefined;

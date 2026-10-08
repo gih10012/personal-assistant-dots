@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3100",
+    "dev": "next dev --hostname 127.0.0.1 --port 3100",
     "build": "next build",
-    "start": "next start --port 3100",
+    "start": "next start --hostname 127.0.0.1 --port 3100",
     "lint": "eslint",
+    "test:mesh": "node --test tests/mesh-*.test.ts",
     "desktop:dev": "OPEN_DOT_DEV_URL=http://localhost:3100 electron electron",
     "desktop:prepare": "next build && node scripts/desktop-prepare.mjs",
     "desktop": "electron electron",

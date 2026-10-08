@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { getSetting, setSetting } from "../db";
 import { seal, unseal } from "../vault";
 import { isOpenRouterModel, openModels, openRouterId, openRouterKey, openrouter, preferredOpenModel, smallOpenModel } from "./openrouter";
+import { configState, enabled as meshEnabled } from "./mesh";
 
 // Models are chosen from what the API key can actually use. Precedence for a dot's model:
 // the dot's own choice → the default picked in Settings → DOTS_MODEL → best available.
@@ -126,6 +127,7 @@ export function clientFor(model: string): { client: OpenAI; model: string; state
 
 /** True when any model provider is set up (OpenAI or OpenRouter). */
 export function canThink(): boolean {
+  if (meshEnabled()) return configState() === "configured";
   return hasKey() || Boolean(openRouterKey());
 }
 

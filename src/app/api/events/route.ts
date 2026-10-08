@@ -1,9 +1,12 @@
+import { webRouteGuard } from "@/server/web-auth";
 import { onEvent } from "@/server/bus";
 import { snapshot } from "@/server/snapshot";
 import type { ServerEvent } from "@/lib/types";
 
 // Server-sent events: one full snapshot on connect, then every change as it happens.
 export async function GET(req: Request) {
+  const denied = webRouteGuard(req, false, false, true);
+  if (denied) return denied;
   const encoder = new TextEncoder();
   let cleanup = () => {};
   const stream = new ReadableStream({

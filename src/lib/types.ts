@@ -152,7 +152,8 @@ export type ComputerInfo = {
   models: string[]; // models the API key can use
   computerTool: string;
   hasKey: boolean;
-  keySource: "env" | "settings" | null;
+  keySource: "env" | "settings" | "codex-mesh" | null;
+  meshConfig?: "configured" | "not_configured" | "invalid_config";
   cloudKey: "env" | "settings" | null; // E2B key for cloud computers
   openRouter: "env" | "settings" | null; // OpenRouter key for open models
   triggersKey: "env" | "settings" | null; // Composio API key for triggers

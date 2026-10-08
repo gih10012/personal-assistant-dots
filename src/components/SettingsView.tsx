@@ -30,7 +30,9 @@ export default function SettingsView() {
         <Section
           eyebrow="Passwords"
           title="Saved logins"
-          description="Your dots can securely use these to log into websites in their browser. Encrypted with a key in your macOS Keychain, typed directly into the page, and never shown to the model."
+          description={computer.keySource === "codex-mesh"
+            ? "These belong to the upstream app's browser vault. They are not forwarded to native Codex workers. Configure worker login separately; do not paste account secrets into task messages."
+            : "Your dots can securely use these to log into websites in their browser. Encrypted with a key in your macOS Keychain, typed directly into the page, and never shown to the model."}
         >
           <div className="space-y-3">
             {passwords.length > 0 ? (
@@ -78,7 +80,9 @@ export default function SettingsView() {
           </div>
         </Section>
 
-        <Section eyebrow="Approvals" title="Rules for all dots" description="These apply to every dot, on top of each dot's own rules.">
+        <Section eyebrow="Approvals" title="Rules for all dots" description={computer.keySource === "codex-mesh"
+          ? "Passed to native workers as task context, not a separately enforced tool allowlist. The worker's native permissions and scoped owner authorization remain the authority."
+          : "These apply to every dot, on top of each dot's own rules."}>
           <RuleEditor dotId={null} name="a dot" />
         </Section>
 
@@ -86,7 +90,9 @@ export default function SettingsView() {
           id="apps"
           eyebrow="Apps"
           title="Your apps, via Composio"
-          description="Sign in with your Composio account to give your dots Gmail, Calendar, Slack, Notion, GitHub, and 500+ more apps. Dots read on their own and ask before sending, posting, or changing anything."
+          description={computer.keySource === "codex-mesh"
+            ? "Upstream Composio connections are not automatically exposed as native worker tools. App-trigger text tasks are bridged; native tool/auth setup is separate."
+            : "Sign in with your Composio account to give your dots Gmail, Calendar, Slack, Notion, GitHub, and 500+ more apps. Dots read on their own and ask before sending, posting, or changing anything."}
         >
           <AppsList />
         </Section>
@@ -121,8 +127,11 @@ export default function SettingsView() {
           </div>
         </Section>
 
-        <Section eyebrow="Engine" title="Models & computers" description="Models come from what your OpenAI key can use, plus open models once you add an OpenRouter key.">
+        <Section eyebrow="Engine" title="Models & computers" description={computer.keySource === "codex-mesh"
+          ? "Native workers select from the host's authenticated model catalog. This interface does not select a paid API model or use the upstream computer harness."
+          : "Models come from what your OpenAI key can use, plus open models once you add an OpenRouter key."}>
           <ApiKey />
+          {computer.keySource !== "codex-mesh" && <>
           <OpenModelsKey />
           <CloudKey />
           <div className="surface mb-3 flex items-center gap-3 p-4">
@@ -132,11 +141,18 @@ export default function SettingsView() {
             </div>
             <ModelPicker allowDefault={false} value={computer.model || null} onChange={(m) => start(() => setDefaultModel(m))} />
           </div>
+          </>}
           <dl className="surface divide-y divide-black/[0.06]">
             {[
-              ["Models on your key", computer.models.length ? `${computer.models.length} available` : "Loading…", true],
-              ["Computer use", computer.computerTool === "off" ? "Off (page tools only)" : "OpenAI computer tool", true],
-              ["Dot computers", computer.docker ? `Docker containers · ${computer.image}` : "Sandbox folders (start Docker for containers)", computer.docker],
+              ...(computer.keySource === "codex-mesh" ? [
+                ["Model selection", "Native worker's authenticated catalog", true],
+                ["Computer live view", "Upstream view is not connected to the native worker", false],
+                ["Task persistence", "Mesh authority; survives this interface restart", true],
+              ] : [
+                ["Models on your key", computer.models.length ? `${computer.models.length} available` : "Loading…", true],
+                ["Computer use", computer.computerTool === "off" ? "Off (page tools only)" : "OpenAI computer tool", true],
+                ["Dot computers", computer.docker ? `Docker containers · ${computer.image}` : "Sandbox folders (start Docker for containers)", computer.docker],
+              ]),
             ].map(([k, v, ok]) => (
               <div key={String(k)} className="flex items-center gap-4 px-4 py-2.5">
                 <dt className="eyebrow w-36 shrink-0">{k}</dt>
@@ -259,6 +275,19 @@ function ApiKey() {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const open = editing || !computer.hasKey;
+
+  if (computer.keySource === "codex-mesh") return (
+    <div id="api-key" className="surface mb-3 p-4">
+      <div className="text-[14px]">Codex native runtime</div>
+      <p className="mt-1 text-body-sm text-foreground/55">
+        {computer.hasKey
+          ? "Private mesh config is valid. Workers reuse the host's Codex login; no new API key is required. Connectivity and model login are verified by actual tasks, not by this config check."
+          : computer.meshConfig === "invalid_config"
+            ? "DOTS_MESH_CONFIG is invalid or not private. Use an owner-only config and token file. Text tasks stay queued locally while disconnected."
+            : "Set DOTS_MESH_CONFIG to a private mesh operator config to connect this interface. Text tasks can be queued locally; no new API key is required."}
+      </p>
+    </div>
+  );
 
   return (
     <div id="api-key" className="surface mb-3 p-4">

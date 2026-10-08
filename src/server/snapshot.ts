@@ -10,6 +10,7 @@ import { openRouterSource } from "./agent/openrouter";
 import { triggersKeySource } from "./triggers";
 import { apps, signedIn } from "./composio";
 import type { ComputerInfo, Snapshot } from "@/lib/types";
+import { configState, enabled as meshEnabled } from "./agent/mesh";
 
 export function computerInfo(): ComputerInfo {
   const m = knownModels();
@@ -17,11 +18,12 @@ export function computerInfo(): ComputerInfo {
     mode: defaultMode(),
     docker: dockerAvailable(),
     image: BOX_IMAGE,
-    model: m.defaultModel,
-    models: m.available,
+    model: meshEnabled() ? "Codex host catalog" : m.defaultModel,
+    models: meshEnabled() ? [] : m.available,
     computerTool: COMPUTER_ENABLED ? "computer" : "off",
-    hasKey: hasKey(),
-    keySource: keySource(),
+    hasKey: meshEnabled() ? configState() === "configured" : hasKey(),
+    keySource: meshEnabled() ? "codex-mesh" : keySource(),
+    ...(meshEnabled() ? { meshConfig: configState() } : {}),
     cloudKey: cloudKeySource(),
     openRouter: openRouterSource(),
     triggersKey: triggersKeySource(),

@@ -1,3 +1,4 @@
+import { webRouteGuard } from "@/server/web-auth";
 import { emit } from "@/server/bus";
 import { finishSignIn } from "@/server/composio";
 import { computerInfo } from "@/server/snapshot";
@@ -6,6 +7,8 @@ import { computerInfo } from "@/server/snapshot";
 // (a separate tab, or the default browser from the desktop app), so this page just says it worked; the app
 // itself updates live through the event stream.
 export async function GET(req: Request) {
+  const denied = webRouteGuard(req, true, true, true);
+  if (denied) return denied;
   const params = new URL(req.url).searchParams;
   const code = params.get("code");
   let error = params.get("error_description") ?? params.get("error");

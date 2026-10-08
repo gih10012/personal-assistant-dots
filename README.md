@@ -1,4 +1,28 @@
-# Open Dot
+# Personal Assistant Dots — native-runtime fork
+
+This public fork of [composio-community/open-dot](https://github.com/composio-community/open-dot) uses [personal-assistant-mesh](https://github.com/gih10012/personal-assistant-mesh) as its default durable task authority, with Codex app-server first and an explicitly configured Pi fallback. It is **not OpenAI's Dots source code**, and does not claim official Dots capability parity. No OpenClaw or OpenCode harness is used.
+
+The localhost workspace shows real projects, delegated tasks, results, continuous native Goal/Plan state, resource advertisements and capability lifecycle evidence. It is an observation surface, not an allow-list of actions the native model can take. An owner/viewer login gate protects every private page, API and server action; mesh and model credentials stay server-side. Read [LOCAL_WEB.md](LOCAL_WEB.md) for private-file login, exact-loopback access, deployment and acceptance checks, and [FORK.md](FORK.md) for runtime boundaries and provenance.
+
+```bash
+pnpm install --frozen-lockfile
+node scripts/web-auth.mjs        # prints private file paths, never secrets
+export DOTS_WEB_AUTH_CONFIG=/absolute/private/web-auth/config.json
+export DOTS_MESH_CONFIG=/absolute/private/operator.json
+export DOTS_DATA_DIR=/absolute/private/dots-data
+pnpm build
+pnpm start                      # http://127.0.0.1:3100/login
+```
+
+The existing mesh worker uses its authorized native Codex login. Do not paste OAuth credentials into this UI and do not create a new API key for native text tasks. Chat, channel/team text, routines and triggers submit durable jobs; closing the Web process does not stop already submitted authority tasks. Voice, attachment transfer, live-computer control, vault use and approval cards are not yet bridged into the native worker. Local schedules still require this UI process. Resources not provided by the authority are marked unavailable rather than simulated.
+
+The upstream snapshot contains no license file; this fork preserves provenance and does not assign it an MIT license. Internet-facing hosting and per-device session revocation are not claimed by this local deployment.
+
+## Historical upstream README
+
+The original README below describes the upstream API/desktop implementation, **not the default native engine or its verified features**. Its API-key, Mac-only, no-login and model descriptions are retained for provenance. Responses mode requires explicit `DOTS_ENGINE=responses`, separate authorization and credentials; it is never an automatic paid fallback. The fork's private Web gate still applies.
+
+# Open Dot (upstream)
 
 OpenAI launched Dots on September 29, personal agents that keep working in the background on their own computers, but you need ChatGPT Pro or Business Premium to use them. Open Dot is an open source version that runs on your own Mac with your own OpenAI key, or with open models like Kimi, DeepSeek and Qwen through OpenRouter.
 

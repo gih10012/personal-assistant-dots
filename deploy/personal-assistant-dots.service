@@ -1,0 +1,19 @@
+[Unit]
+Description=Personal Assistant Dots private localhost workspace
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Github/personal-assistant-dots
+Environment=DOTS_ENGINE=native
+Environment=DOTS_MESH_CONFIG=%h/.local/state/personal-assistant-mesh/operator.json
+Environment=DOTS_DATA_DIR=%h/.local/state/personal-assistant-dots/data
+Environment=DOTS_WEB_AUTH_CONFIG=%h/.local/state/personal-assistant-dots/web-auth/config.json
+Environment=NEXT_TELEMETRY_DISABLED=1
+ExecStart=/usr/bin/node %h/Github/personal-assistant-dots/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3100
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=default.target
